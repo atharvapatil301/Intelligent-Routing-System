@@ -1,0 +1,27 @@
+# Environment
+.env
+venv/
+env/
+*.pyc
+__pycache__/
+.venv
+
+# IDE
+.idea/
+.vscode/
+.claude
+
+# Logs
+logs/
+*.log
+
+# Data
+data/
+*.db
+*.sqlite
+
+# Model cache
+.cache/
+models/
+
+Intelligent-Routing-System.md
