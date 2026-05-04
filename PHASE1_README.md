@@ -488,55 +488,6 @@ echo "test" | claude --print --tools ""
 
 ---
 
-## Next Steps (Phase 2+)
-
-The baseline system is complete. Future enhancements:
-
-### Phase 2: Feature Engineering
-- [ ] Sentence embeddings for semantic analysis
-- [ ] Better complexity detection (code structure analysis)
-- [ ] Similarity search to past queries
-- [ ] More sophisticated feature extraction
-
-### Phase 3: Dataset Creation
-- [ ] Run same prompts through both models
-- [ ] Collect success/failure metrics
-- [ ] Build training dataset (500-1000 samples)
-- [ ] Quality evaluation framework
-
-### Phase 4: ML Routing Model
-- [ ] Train classifier on collected data
-- [ ] Replace rule-based routing with ML
-- [ ] Optimize for cost/quality/speed tradeoff
-- [ ] Threshold tuning
-
-### Phase 5: Advanced Features
-- [ ] Confidence-based routing (try local first, escalate if uncertain)
-- [ ] Semantic caching for similar queries
-- [ ] Online learning from production feedback
-- [ ] Multi-tier routing (cache → local → cloud)
-
-### Phase 6: Production Features
-- [ ] Save/resume conversations across sessions
-- [ ] Named conversation threads
-- [ ] Cross-model context transfer
-- [ ] VS Code extension
-- [ ] API service wrapper
-
----
-
-## Technical Notes
-
-### Why Claude Code CLI?
-
-Instead of using Anthropic API directly, we use the `claude` CLI:
-
-**Benefits:**
-- ✅ No API key management needed
-- ✅ Uses your existing Claude Code subscription
-- ✅ Simpler integration (subprocess)
-- ✅ Automatic session management
-- ✅ Same quality as API
 
 **How it works:**
 ```bash
@@ -570,20 +521,6 @@ def route(prompt):
 
     return "local"  # Default: save costs
 ```
-
-Future (Phase 4):
-```python
-def route(prompt):
-    features = extract_features(prompt)  # Embeddings, etc.
-    probability = ml_model.predict(features)
-
-    if probability > threshold:
-        return "local"  # ML predicts local can handle it
-    else:
-        return "cloud"  # ML predicts need cloud quality
-```
-
----
 
 ## Files Reference
 
