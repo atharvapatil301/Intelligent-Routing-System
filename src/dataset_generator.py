@@ -18,29 +18,23 @@ from .config import config
 class DatasetSample:
     """A single sample in the training dataset."""
 
-    # Identifiers
     sample_id: str
     timestamp: str
     prompt: str
 
-    # Features
     features: Dict[str, Any]
     embedding: List[float]
 
-    # Model outputs
     qwen_output: str
     claude_output: str
 
-    # Evaluation
     qwen_success: bool
     claude_success: bool
     qwen_score: float
     claude_score: float
 
-    # Label (0 = local sufficient, 1 = cloud needed)
     label: int
 
-    # Metadata
     qwen_latency_ms: float
     claude_latency_ms: float
     evaluation_method: str
@@ -92,10 +86,8 @@ class DatasetGenerator:
         """
         print(f"\nGenerating sample for: {prompt[:60]}...")
 
-        # Extract features
         features = self.feature_extractor.extract(prompt, generate_embedding=True)
 
-        # Run both models
         print("  Running Qwen (local)...")
         qwen_output, qwen_latency = self._run_model_with_timing(
             self.ollama_client, prompt, timeout
@@ -106,7 +98,6 @@ class DatasetGenerator:
             self.claude_client, prompt, timeout
         )
 
-        # Evaluate outputs
         print(f"  Evaluating with {evaluation_method}...")
         qwen_success, qwen_score = self._evaluate_output(
             prompt, qwen_output, evaluation_method
@@ -115,14 +106,12 @@ class DatasetGenerator:
             prompt, claude_output, evaluation_method
         )
 
-        # Determine label
-        # label = 0 if local is sufficient, 1 if cloud is needed
         if qwen_success and qwen_score >= 0.7:
-            label = 0  # Local is sufficient
+            label = 0
         elif claude_success and claude_score > qwen_score:
-            label = 1  # Cloud is better
+            label = 1
         else:
-            label = 0  # Default to local if both fail or comparable
+            label = 0
 
         sample = DatasetSample(
             sample_id=str(uuid.uuid4()),
@@ -169,7 +158,7 @@ class DatasetGenerator:
         try:
             response = client.generate(
                 prompt,
-                continue_conversation=False  # Fresh context for each sample
+                continue_conversation=False
             )
             output = response.get('response', '')
         except Exception as e:
@@ -219,22 +208,18 @@ class DatasetGenerator:
         score = 0.0
         reasons = []
 
-        # Check for code presence
         if "def " in output or "class " in output or "function" in output:
             score += 0.3
             reasons.append("code_present")
 
-        # Check for code blocks
         if "```" in output:
             score += 0.2
             reasons.append("code_block")
 
-        # Check length (not too short)
         if len(output) > 50:
             score += 0.2
             reasons.append("adequate_length")
 
-        # Check for common error indicators
         error_indicators = ["error", "cannot", "unable", "sorry", "don't know"]
         has_errors = any(ind in output.lower() for ind in error_indicators)
         if not has_errors:
@@ -255,14 +240,6 @@ class DatasetGenerator:
         Returns:
             Tuple of (success, score)
         """
-        # TODO: Implement unit test execution
-        # This would require:
-        # 1. Extract code from output
-        # 2. Write/use test cases
-        # 3. Execute tests safely
-        # 4. Return pass/fail
-
-        # For now, fall back to heuristic
         return self._heuristic_evaluation(output)
 
     def _llm_judge_evaluation(self, prompt: str, output: str) -> Tuple[bool, float]:
@@ -275,10 +252,6 @@ class DatasetGenerator:
         Returns:
             Tuple of (success, score)
         """
-        # TODO: Implement LLM-as-judge evaluation
-        # This would use Claude to evaluate the output quality
-
-        # For now, fall back to heuristic
         return self._heuristic_evaluation(output)
 
     def generate_from_prompts(
@@ -306,7 +279,6 @@ class DatasetGenerator:
                 sample = self.generate_sample(prompt, evaluation_method)
                 samples.append(sample)
 
-                # Auto-save progress
                 if i % save_interval == 0:
                     self.save_dataset(f"dataset_progress_{i}.jsonl")
 

@@ -16,7 +16,6 @@ class Config:
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
     claude_model: str = "claude-sonnet-4-5-20250929"
 
-    # Routing is now hardcoded to ML-first with enhanced fallback
     prompt_length_threshold: int = int(os.getenv("PROMPT_LENGTH_THRESHOLD", "100"))
 
     cloud_keywords: list[str] = None

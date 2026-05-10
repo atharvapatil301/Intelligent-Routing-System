@@ -10,19 +10,16 @@ from sentence_transformers import SentenceTransformer
 class QueryFeatures:
     """Comprehensive features extracted from a coding query."""
 
-    # Basic text features
     char_count: int
     token_count: int
     line_count: int
     word_count: int
 
-    # Code structure features
     has_code_block: bool
     num_code_blocks: int
     num_functions_requested: int
     num_classes_requested: int
 
-    # Question type features
     question_types: List[str]
     is_implementation: bool
     is_debugging: bool
@@ -30,14 +27,12 @@ class QueryFeatures:
     is_optimization: bool
     is_explanation: bool
 
-    # Complexity signals
     has_complexity_keywords: bool
     matched_keywords: List[str]
     has_concurrency_mentions: bool
     has_algorithm_complexity: bool
     has_reasoning_keywords: bool
 
-    # Advanced features
     embedding: Optional[np.ndarray] = None
     similarity_to_failures: float = 0.0
 
@@ -72,7 +67,6 @@ class QueryFeatures:
             self.similarity_to_failures,
         ]
 
-        # Include embedding if available
         if self.embedding is not None:
             features.extend(self.embedding.tolist())
 
@@ -82,7 +76,6 @@ class QueryFeatures:
 class FeatureExtractor:
     """Extract advanced features from coding queries."""
 
-    # Complexity keywords (from config.py)
     CLOUD_KEYWORDS = [
         "optimize", "optimization",
         "design", "architecture",
@@ -94,22 +87,19 @@ class FeatureExtractor:
         "system design"
     ]
 
-    # Reasoning keywords
     REASONING_KEYWORDS = [
         "why", "derive", "prove", "justify", "explain",
         "analyze", "compare", "evaluate", "reason"
     ]
 
-    # Concurrency keywords
     CONCURRENCY_KEYWORDS = [
         "thread", "concurrent", "parallel", "async", "await",
         "lock", "mutex", "semaphore", "race condition",
         "deadlock", "synchronize", "atomic"
     ]
 
-    # Algorithm complexity indicators
     COMPLEXITY_PATTERNS = [
-        r"O\([^)]+\)",  # Big-O notation
+        r"O\([^)]+\)",
         r"time complexity",
         r"space complexity",
         r"dynamic programming",
@@ -148,19 +138,16 @@ class FeatureExtractor:
         """
         prompt_lower = prompt.lower()
 
-        # Basic text features
         char_count = len(prompt)
-        token_count = len(prompt) // 4  # Rough approximation
+        token_count = len(prompt) // 4
         line_count = prompt.count("\n") + 1
         word_count = len(prompt.split())
 
-        # Code structure features
         has_code_block = "```" in prompt or "    " in prompt
         num_code_blocks = prompt.count("```") // 2
         num_functions_requested = self._count_function_requests(prompt_lower)
         num_classes_requested = self._count_class_requests(prompt_lower)
 
-        # Question type detection
         question_types = self._detect_question_types(prompt_lower)
         is_implementation = "implementation" in question_types
         is_debugging = "debugging" in question_types
@@ -168,7 +155,6 @@ class FeatureExtractor:
         is_optimization = "optimization" in question_types
         is_explanation = "explanation" in question_types
 
-        # Complexity signals
         matched_keywords = [kw for kw in self.CLOUD_KEYWORDS if kw in prompt_lower]
         has_complexity_keywords = len(matched_keywords) > 0
         has_concurrency_mentions = any(kw in prompt_lower for kw in self.CONCURRENCY_KEYWORDS)
@@ -177,7 +163,6 @@ class FeatureExtractor:
         )
         has_reasoning_keywords = any(kw in prompt_lower for kw in self.REASONING_KEYWORDS)
 
-        # Generate embedding
         embedding = None
         if generate_embedding:
             embedding = self.embedding_model.encode(prompt, convert_to_numpy=True)
@@ -203,7 +188,7 @@ class FeatureExtractor:
             has_algorithm_complexity=has_algorithm_complexity,
             has_reasoning_keywords=has_reasoning_keywords,
             embedding=embedding,
-            similarity_to_failures=0.0,  # Will be computed by vector DB
+            similarity_to_failures=0.0,
         )
 
     def _count_function_requests(self, prompt_lower: str) -> int:
@@ -220,7 +205,6 @@ class FeatureExtractor:
             if match:
                 count = max(count, int(match.group(1)))
 
-        # Check for single function requests
         if any(word in prompt_lower for word in ["function", "method", "procedure"]):
             count = max(count, 1)
 
@@ -240,7 +224,6 @@ class FeatureExtractor:
             if match:
                 count = max(count, int(match.group(1)))
 
-        # Check for single class requests
         if "class" in prompt_lower:
             count = max(count, 1)
 
@@ -275,12 +258,10 @@ class FeatureExtractor:
         """
         features_list = []
 
-        # Extract non-embedding features first
         for prompt in prompts:
             features = self.extract(prompt, generate_embedding=False)
             features_list.append(features)
 
-        # Generate embeddings in batch for efficiency
         if generate_embeddings:
             embeddings = self.embedding_model.encode(prompts, convert_to_numpy=True)
             for i, features in enumerate(features_list):

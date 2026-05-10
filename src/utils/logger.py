@@ -20,7 +20,6 @@ class RequestLogger:
         self.log_dir = Path(log_dir or config.log_dir)
         self.log_dir.mkdir(exist_ok=True)
 
-        # Create log files
         self.request_log_file = self.log_dir / "requests.jsonl"
         self.stats_log_file = self.log_dir / "stats.json"
 

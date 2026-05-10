@@ -17,7 +17,6 @@ def addapt_numpy_int64(numpy_int64):
     """Adapter for numpy int64 to PostgreSQL."""
     return AsIs(numpy_int64)
 
-# Register numpy adapters
 register_adapter(np.float64, addapt_numpy_float64)
 register_adapter(np.int64, addapt_numpy_int64)
 
@@ -42,7 +41,6 @@ class QueryVectorDB:
             user: Database user
             password: Database password (will use env var POSTGRES_PASSWORD if not provided)
         """
-        # Get password from environment if not provided
         if password is None:
             password = os.getenv("POSTGRES_PASSWORD", "")
 
@@ -54,7 +52,6 @@ class QueryVectorDB:
             "password": password
         }
 
-        # Initialize connection
         self.conn = None
         self._connect()
         self._initialize_database()
@@ -71,10 +68,8 @@ class QueryVectorDB:
         """Initialize database schema with pgvector extension."""
         try:
             with self.conn.cursor() as cur:
-                # Enable pgvector extension
                 cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
 
-                # Create table for coding queries
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS coding_queries (
                         id TEXT PRIMARY KEY,
@@ -85,7 +80,6 @@ class QueryVectorDB:
                     );
                 """)
 
-                # Create index for vector similarity search (using cosine distance)
                 cur.execute("""
                     CREATE INDEX IF NOT EXISTS coding_queries_embedding_idx
                     ON coding_queries
@@ -93,7 +87,6 @@ class QueryVectorDB:
                     WITH (lists = 100);
                 """)
 
-                # Create index on metadata for filtering
                 cur.execute("""
                     CREATE INDEX IF NOT EXISTS coding_queries_metadata_idx
                     ON coding_queries
@@ -122,10 +115,8 @@ class QueryVectorDB:
         """
         try:
             with self.conn.cursor() as cur:
-                # Convert embedding to list format for pgvector
                 embedding_list = embedding.tolist() if isinstance(embedding, np.ndarray) else embedding
 
-                # Upsert query (update if exists, insert if not)
                 cur.execute("""
                     INSERT INTO coding_queries (id, prompt, embedding, metadata)
                     VALUES (%s, %s, %s, %s)
@@ -159,7 +150,6 @@ class QueryVectorDB:
         """
         try:
             with self.conn.cursor() as cur:
-                # Prepare data for batch insert
                 data = [
                     (
                         qid,
@@ -170,7 +160,6 @@ class QueryVectorDB:
                     for qid, prompt, emb, meta in zip(query_ids, prompts, embeddings, metadatas)
                 ]
 
-                # Batch upsert
                 execute_values(
                     cur,
                     """
@@ -211,14 +200,12 @@ class QueryVectorDB:
             with self.conn.cursor() as cur:
                 embedding_list = embedding.tolist() if isinstance(embedding, np.ndarray) else embedding
 
-                # Build query with optional metadata filtering
                 query = """
                     SELECT id, embedding <=> %s::vector AS distance, metadata
                     FROM coding_queries
                 """
                 params = [embedding_list]
 
-                # Add metadata filter if provided
                 if filter_metadata:
                     conditions = []
                     for key, value in filter_metadata.items():
@@ -260,13 +247,12 @@ class QueryVectorDB:
         ids, distances, metadatas = self.find_similar(embedding, k=k)
 
         if not metadatas:
-            return 0.5  # No data, assume neutral
+            return 0.5
 
-        # Count successes where local model was used
         local_queries = [m for m in metadatas if m.get('model_used') == 'local']
 
         if not local_queries:
-            return 0.5  # No local model data
+            return 0.5
 
         successes = sum(1 for m in local_queries if m.get('success', False))
         return successes / len(local_queries)
@@ -288,22 +274,18 @@ class QueryVectorDB:
         ids, distances, metadatas = self.find_similar(embedding, k=k)
 
         if not metadatas:
-            return 0.0  # No data
+            return 0.0
 
-        # Find failures (local model used but failed)
         failures = [
             (d, m) for d, m in zip(distances, metadatas)
             if m.get('model_used') == 'local' and not m.get('success', True)
         ]
 
         if not failures:
-            return 0.0  # No failure data
+            return 0.0
 
-        # Average similarity to failures (lower distance = higher similarity)
         avg_distance = sum(d for d, _ in failures) / len(failures)
 
-        # Convert cosine distance to similarity
-        # Cosine distance is 1 - cosine_similarity, so similarity = 1 - distance
         similarity = 1.0 - avg_distance
 
         return max(0.0, min(1.0, similarity))
@@ -316,7 +298,6 @@ class QueryVectorDB:
         """
         try:
             with self.conn.cursor() as cur:
-                # Get total count
                 cur.execute("SELECT COUNT(*) FROM coding_queries;")
                 count = cur.fetchone()[0]
 
@@ -329,7 +310,6 @@ class QueryVectorDB:
                         "sample_size": 0
                     }
 
-                # Get sample statistics (limit to 100 for performance)
                 sample_size = min(count, 100)
                 cur.execute("""
                     SELECT metadata
@@ -379,7 +359,6 @@ class QueryVectorDB:
                     print("No data to export")
                     return
 
-                # Get all data
                 cur.execute("""
                     SELECT id, prompt, embedding, metadata
                     FROM coding_queries
@@ -392,7 +371,7 @@ class QueryVectorDB:
                     data["queries"].append({
                         "id": row[0],
                         "prompt": row[1],
-                        "embedding": row[2],  # Already in list format
+                        "embedding": row[2],
                         "metadata": row[3]
                     })
 

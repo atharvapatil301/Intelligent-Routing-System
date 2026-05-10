@@ -38,7 +38,6 @@ def main():
     print("=" * 80)
     print()
 
-    # Check if datasets exist
     train_path = Path(args.train)
     val_path = Path(args.val)
     test_path = Path(args.test)
@@ -77,7 +76,6 @@ def main():
     print(f"Early stopping patience: {args.patience}")
     print()
 
-    # Initialize model
     model = RoutingMLModel(
         input_dim=403,
         hidden_dims=args.hidden_dims,
@@ -98,7 +96,6 @@ def main():
     print(f"Trainable parameters: {trainable_params:,}")
     print()
 
-    # Train model
     print("=" * 80)
     print("TRAINING")
     print("=" * 80)
@@ -110,7 +107,6 @@ def main():
         early_stopping_patience=args.patience
     )
 
-    # Evaluate on test set
     if test_path:
         print()
         print("=" * 80)
@@ -130,20 +126,17 @@ def main():
         print(f"\n  Confusion Matrix:")
         print(f"    {metrics['confusion_matrix']}")
 
-        # Save metrics to file
         metrics_path = Path(args.model_dir) / 'metrics.json'
         with open(metrics_path, 'w') as f:
             json.dump(metrics, f, indent=2)
         print(f"\n  Metrics saved to: {metrics_path}")
 
-    # Save model
     print()
     print("=" * 80)
     print("SAVING MODEL")
     print("=" * 80)
     model.save(args.model_dir)
 
-    # Save training history
     history_path = Path(args.model_dir) / 'training_history.json'
     with open(history_path, 'w') as f:
         json.dump(history, f, indent=2)

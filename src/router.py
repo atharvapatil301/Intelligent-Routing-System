@@ -40,15 +40,12 @@ class Router:
         self.ml_threshold = ml_threshold
         self.model_dir = model_dir
 
-        # Always initialize feature extractor for ML and enhanced routing
         self.feature_extractor = FeatureExtractor()
 
-        # Initialize vector DB if requested
         self.vector_db: Optional[QueryVectorDB] = None
         if use_vector_db:
             self.vector_db = QueryVectorDB()
 
-        # Always try to load ML model (will fallback to enhanced if not available)
         self.ml_model: Optional[Any] = None
         self._load_ml_model()
 
@@ -63,7 +60,6 @@ class Router:
         Returns:
             RoutingDecision with target model and reasoning
         """
-        # Always try ML routing first
         return self._ml_routing(prompt)
 
     def _enhanced_routing(self, prompt: str) -> RoutingDecision:
@@ -77,17 +73,13 @@ class Router:
         Returns:
             RoutingDecision
         """
-        # Extract advanced features
         features = self.feature_extractor.extract(prompt, generate_embedding=True)
 
-        # Calculate similarity to failures if vector DB available
         if self.vector_db is not None and features.embedding is not None:
             features.similarity_to_failures = self.vector_db.calculate_similarity_to_failures(
                 features.embedding, k=10
             )
 
-        # Enhanced decision logic
-        # Rule 1: High similarity to past failures → cloud
         if features.similarity_to_failures > 0.7:
             return RoutingDecision(
                 target="cloud",
@@ -96,7 +88,6 @@ class Router:
                 features=features.to_dict()
             )
 
-        # Rule 2: Concurrency or algorithm complexity → cloud
         if features.has_concurrency_mentions or features.has_algorithm_complexity:
             reasons = []
             if features.has_concurrency_mentions:
@@ -110,7 +101,6 @@ class Router:
                 features=features.to_dict()
             )
 
-        # Rule 3: Design or optimization questions → cloud
         if features.is_design or features.is_optimization:
             question_type = "design" if features.is_design else "optimization"
             return RoutingDecision(
@@ -120,7 +110,6 @@ class Router:
                 features=features.to_dict()
             )
 
-        # Rule 4: Complexity keywords → cloud
         if features.has_complexity_keywords:
             return RoutingDecision(
                 target="cloud",
@@ -129,7 +118,6 @@ class Router:
                 features=features.to_dict()
             )
 
-        # Rule 5: Multiple functions/classes requested → cloud
         if features.num_functions_requested > 2 or features.num_classes_requested > 1:
             return RoutingDecision(
                 target="cloud",
@@ -138,7 +126,6 @@ class Router:
                 features=features.to_dict()
             )
 
-        # Rule 6: Very long prompts → cloud
         if features.token_count > 200:
             return RoutingDecision(
                 target="cloud",
@@ -147,7 +134,6 @@ class Router:
                 features=features.to_dict()
             )
 
-        # Default: Local for simple tasks
         return RoutingDecision(
             target="local",
             reason="Simple task - using local model",
@@ -188,33 +174,26 @@ class Router:
         Returns:
             RoutingDecision
         """
-        # If model not loaded, fall back to enhanced routing
         if self.ml_model is None:
             return self._enhanced_routing(prompt)
 
-        # Extract features
         features = self.feature_extractor.extract(prompt, generate_embedding=True)
 
-        # Calculate similarity to failures if vector DB available
         if self.vector_db is not None and features.embedding is not None:
             features.similarity_to_failures = self.vector_db.calculate_similarity_to_failures(
                 features.embedding, k=10
             )
 
-        # Extract feature vector for ML model
         feature_vector = self._extract_feature_vector(features)
 
-        # Predict using ML model
         try:
             prediction, confidence = self.ml_model.predict(
                 feature_vector,
                 threshold=self.ml_threshold
             )
 
-            # prediction: 0 = local, 1 = cloud
             target = "cloud" if prediction == 1 else "local"
 
-            # Generate reason
             prob_cloud = confidence if prediction == 1 else 1 - confidence
             reason = (
                 f"ML model prediction (P(cloud)={prob_cloud:.2f}, "
@@ -244,13 +223,11 @@ class Router:
         """
         feature_list = []
 
-        # Embedding (384 dimensions)
         if features.embedding is not None:
             feature_list.extend(features.embedding.tolist())
         else:
             feature_list.extend([0.0] * 384)
 
-        # Structural features (19 features)
         feature_list.extend([
             features.char_count,
             features.token_count,

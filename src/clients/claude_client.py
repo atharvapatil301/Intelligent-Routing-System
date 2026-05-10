@@ -19,7 +19,7 @@ class ClaudeClient:
         """
         self.model = model or config.claude_model
         self.claude_path = shutil.which("claude")
-        self.session_id = None  # Track current session for continuation
+        self.session_id = None
 
     def generate(self, prompt: str, temperature: float = 0.7,
                  max_tokens: int = 4096, continue_conversation: bool = False) -> Dict[str, Any]:

@@ -19,7 +19,7 @@ class OllamaClient:
         self.base_url = base_url or config.ollama_base_url
         self.model = model or config.ollama_model
         self.api_url = f"{self.base_url}/api/generate"
-        self.context = None  # Store conversation context
+        self.context = None
 
     def generate(self, prompt: str, stream: bool = False,
                  temperature: float = 0.7, max_tokens: int = 2048,

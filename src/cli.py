@@ -33,7 +33,6 @@ class IRS:
         self.ollama_client = OllamaClient()
         self.claude_client = ClaudeClient()
 
-        # Initialize router with ML-first routing and enhanced fallback
         self.router = Router(use_vector_db=use_vector_db)
 
         self.logger = RequestLogger()
@@ -89,17 +88,13 @@ class IRS:
             error=result.get("error")
         )
 
-        # Save to vector database if enabled (Phase 2)
         if self.vector_db is not None and self.feature_extractor is not None:
             try:
-                # Extract features with embedding
                 features = self.feature_extractor.extract(prompt, generate_embedding=True)
 
-                # Generate unique query ID
                 import uuid
                 query_id = str(uuid.uuid4())
 
-                # Store in vector DB
                 self.vector_db.add_query(
                     query_id=query_id,
                     prompt=prompt,
@@ -114,7 +109,6 @@ class IRS:
                     }
                 )
             except Exception as e:
-                # Don't fail the request if vector DB storage fails
                 console.print(f"[yellow]Warning: Failed to save to vector DB: {e}[/yellow]")
 
         return {
@@ -319,7 +313,6 @@ def generate_dataset(prompts_file, num_samples, output, evaluation, category):
     """Generate training dataset by running both models (Phase 3)."""
     console.print("[bold cyan]Dataset Generation - Phase 3[/bold cyan]\n")
 
-    # Load prompts
     prompts_path = Path(prompts_file)
     if not prompts_path.exists():
         console.print(f"[red]Error: Prompts file not found: {prompts_file}[/red]")
@@ -328,7 +321,6 @@ def generate_dataset(prompts_file, num_samples, output, evaluation, category):
     with open(prompts_path) as f:
         data = json.load(f)
 
-    # Collect prompts
     all_prompts = []
     if category:
         if category in data.get("categories", {}):
@@ -348,13 +340,11 @@ def generate_dataset(prompts_file, num_samples, output, evaluation, category):
 
     console.print(f"[green]Generating {len(all_prompts)} samples using {evaluation} evaluation[/green]\n")
 
-    # Check models
     ollama = OllamaClient()
     if not ollama.health_check():
         console.print("[red]Error: Ollama is not running![/red]")
         return
 
-    # Generate dataset
     generator = DatasetGenerator()
 
     with Progress(
@@ -371,7 +361,6 @@ def generate_dataset(prompts_file, num_samples, output, evaluation, category):
                 generator.generate_sample(prompt, evaluation_method=evaluation)
                 progress.update(task, advance=1)
 
-                # Auto-save every 10 samples
                 if i % 10 == 0:
                     generator.save_dataset(f"progress_{output}")
 
@@ -380,10 +369,8 @@ def generate_dataset(prompts_file, num_samples, output, evaluation, category):
                 progress.update(task, advance=1)
                 continue
 
-    # Save final dataset
     output_path = generator.save_dataset(output)
 
-    # Show statistics
     stats = generator.get_statistics()
     console.print("\n[bold]Dataset Statistics:[/bold]")
     table = Table(box=box.ROUNDED)
@@ -446,10 +433,8 @@ def extract_features(prompt):
     with console.status("[yellow]Extracting features...[/yellow]"):
         features = extractor.extract(prompt, generate_embedding=True)
 
-    # Display features
     console.print(Panel(prompt, title="[bold]Prompt[/bold]", border_style="blue"))
 
-    # Basic features
     table = Table(title="Basic Features", box=box.ROUNDED)
     table.add_column("Feature", style="cyan")
     table.add_column("Value", style="green")
@@ -463,7 +448,6 @@ def extract_features(prompt):
 
     console.print(table)
 
-    # Structural features
     table2 = Table(title="Structural Features", box=box.ROUNDED)
     table2.add_column("Feature", style="cyan")
     table2.add_column("Value", style="green")
@@ -474,7 +458,6 @@ def extract_features(prompt):
 
     console.print(table2)
 
-    # Complexity signals
     table3 = Table(title="Complexity Signals", box=box.ROUNDED)
     table3.add_column("Feature", style="cyan")
     table3.add_column("Value", style="green")
@@ -488,7 +471,6 @@ def extract_features(prompt):
 
     console.print(table3)
 
-    # Embedding info
     if features.embedding is not None:
         console.print(f"\n[green]✓ Embedding generated: {features.embedding.shape[0]} dimensions[/green]")
 

@@ -13,13 +13,6 @@ def label_query_heuristic(features: dict) -> int:
     Returns:
         0 for local-sufficient, 1 for cloud-needed
     """
-    # Cloud if:
-    # - Has complexity keywords
-    # - Has concurrency or algorithm complexity
-    # - Design or optimization question
-    # - Multiple functions/classes
-    # - Very long
-
     if features.get('has_complexity_keywords'):
         return 1
 
@@ -35,24 +28,20 @@ def label_query_heuristic(features: dict) -> int:
     if features.get('token_count', 0) > 200:
         return 1
 
-    # Default: local
     return 0
 
 
 def generate_synthetic_dataset(num_samples: int = 100, output_path: str = "data/datasets/synthetic_dataset.jsonl"):
     """Generate synthetic dataset quickly using heuristic labeling."""
 
-    # Load seed prompts
     with open('data/seed_prompts.json', 'r') as f:
         seed_data = json.load(f)
 
-    # Get all prompts from categories
     prompts = []
     if 'categories' in seed_data:
         for category_data in seed_data['categories'].values():
             prompts.extend(category_data)
 
-    # Additional synthetic prompts
     additional_prompts = [
         "Write a hello world function",
         "Create a function to add two numbers",
@@ -78,7 +67,6 @@ def generate_synthetic_dataset(num_samples: int = 100, output_path: str = "data/
 
     prompts.extend(additional_prompts)
 
-    # Generate dataset
     feature_extractor = FeatureExtractor()
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -90,23 +78,20 @@ def generate_synthetic_dataset(num_samples: int = 100, output_path: str = "data/
     for i in range(min(num_samples, len(prompts))):
         prompt = prompts[i % len(prompts)]
 
-        # Extract features
         features = feature_extractor.extract(prompt, generate_embedding=True)
 
-        # Label using heuristic
         label = label_query_heuristic(features.to_dict())
 
-        # Create sample
         sample = {
             "sample_id": str(uuid.uuid4()),
             "timestamp": datetime.now().isoformat(),
             "prompt": prompt,
             "features": features.to_dict(),
             "embedding": features.embedding.tolist() if features.embedding is not None else None,
-            "qwen_output": "",  # Not needed for training
-            "claude_output": "",  # Not needed for training
-            "qwen_success": label == 0,  # Assume local succeeds for local samples
-            "claude_success": True,  # Assume cloud always succeeds
+            "qwen_output": "",
+            "claude_output": "",
+            "qwen_success": label == 0,
+            "claude_success": True,
             "qwen_score": 0.8 if label == 0 else 0.3,
             "claude_score": 1.0,
             "label": label,
@@ -121,7 +106,6 @@ def generate_synthetic_dataset(num_samples: int = 100, output_path: str = "data/
         if (i + 1) % 10 == 0:
             print(f"  Generated {i + 1}/{num_samples} samples...")
 
-    # Write to file
     with open(output_path, 'w') as f:
         for sample in dataset:
             f.write(json.dumps(sample) + '\n')
@@ -129,7 +113,6 @@ def generate_synthetic_dataset(num_samples: int = 100, output_path: str = "data/
     print(f"\n✓ Generated {len(dataset)} samples")
     print(f"  Output: {output_path}")
 
-    # Show label distribution
     local_count = sum(1 for s in dataset if s['label'] == 0)
     cloud_count = sum(1 for s in dataset if s['label'] == 1)
     print(f"\n  Label distribution:")
