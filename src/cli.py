@@ -24,26 +24,21 @@ console = Console()
 class IRS:
     """Intelligent Routing System orchestrator."""
 
-    def __init__(self, use_enhanced_routing: bool = True):
+    def __init__(self, use_vector_db: bool = True):
         """Initialize the routing system.
 
         Args:
-            use_enhanced_routing: If True, use enhanced routing with features and vector DB
+            use_vector_db: If True, use vector DB for similarity search
         """
         self.ollama_client = OllamaClient()
         self.claude_client = ClaudeClient()
 
-        # Use enhanced routing with Phase 2 features
-        strategy = "enhanced" if use_enhanced_routing else config.routing_strategy
-        self.router = Router(
-            strategy=strategy,
-            use_features=use_enhanced_routing,
-            use_vector_db=use_enhanced_routing
-        )
+        # Initialize router with ML-first routing and enhanced fallback
+        self.router = Router(use_vector_db=use_vector_db)
 
         self.logger = RequestLogger()
-        self.vector_db = QueryVectorDB() if use_enhanced_routing else None
-        self.feature_extractor = FeatureExtractor() if use_enhanced_routing else None
+        self.vector_db = QueryVectorDB() if use_vector_db else None
+        self.feature_extractor = FeatureExtractor() if use_vector_db else None
         self.last_model_used = None
 
     def generate(self, prompt: str, force_model: str = None, continue_conversation: bool = False) -> dict:
@@ -310,7 +305,7 @@ def check():
     console.print(f"\n[bold]Configuration:[/bold]")
     console.print(f"  Ollama URL: {config.ollama_base_url}")
     console.print(f"  Ollama Model: {config.ollama_model}")
-    console.print(f"  Routing Strategy: {config.routing_strategy}")
+    console.print(f"  Routing Strategy: ML-based (with enhanced rule-based fallback)")
     console.print(f"  Prompt Threshold: {config.prompt_length_threshold} tokens")
 
 
