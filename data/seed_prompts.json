@@ -1,0 +1,130 @@
+{
+  "description": "Seed prompts for dataset generation - Phase 3",
+  "categories": {
+    "simple": [
+      "Write a function to add two numbers",
+      "Create a function that returns 'Hello World'",
+      "Implement a function to check if a number is even",
+      "Write a function to reverse a string",
+      "Create a function to find the maximum of two numbers",
+      "Implement a function to calculate the factorial of a number",
+      "Write a function to check if a string is a palindrome",
+      "Create a function to count vowels in a string",
+      "Implement a function to convert Celsius to Fahrenheit",
+      "Write a function to calculate the sum of elements in a list"
+    ],
+    "medium": [
+      "Implement a binary search function",
+      "Write a function to merge two sorted arrays",
+      "Create a function to find the nth Fibonacci number",
+      "Implement a function to validate email addresses using regex",
+      "Write a function to remove duplicates from a list",
+      "Create a class to represent a stack with push and pop operations",
+      "Implement a function to find all prime numbers up to n",
+      "Write a function to perform breadth-first search on a tree",
+      "Create a function to calculate the longest common subsequence",
+      "Implement a simple LRU cache",
+      "Write a function to detect cycles in a linked list",
+      "Create a function to implement quicksort",
+      "Implement a function to validate balanced parentheses",
+      "Write a function to find the kth largest element in an array",
+      "Create a class for a basic banking account with deposit and withdraw"
+    ],
+    "complex_algorithms": [
+      "Implement dynamic programming solution for the knapsack problem",
+      "Write an algorithm to solve the N-Queens problem using backtracking",
+      "Create a function to find strongly connected components in a graph",
+      "Implement Dijkstra's shortest path algorithm",
+      "Write a function to perform topological sorting on a DAG",
+      "Create an implementation of the A* pathfinding algorithm",
+      "Implement a trie data structure with insert, search, and prefix matching",
+      "Write a function to find the maximum flow in a network using Ford-Fulkerson",
+      "Create an algorithm for longest increasing subsequence with O(n log n) complexity",
+      "Implement a suffix tree for pattern matching"
+    ],
+    "concurrency": [
+      "Implement a thread-safe singleton pattern in Python",
+      "Write a producer-consumer pattern using threading and queues",
+      "Create a thread pool implementation with worker threads",
+      "Implement a concurrent hash map with locks",
+      "Write a solution to the dining philosophers problem",
+      "Create an async/await example for concurrent HTTP requests",
+      "Implement a rate limiter with thread safety",
+      "Write a concurrent task scheduler with priorities",
+      "Create a thread-safe counter with atomic operations",
+      "Implement a reader-writer lock pattern"
+    ],
+    "optimization": [
+      "Optimize this bubble sort implementation for better performance",
+      "Improve the time complexity of this nested loop to O(n)",
+      "Refactor this code to reduce memory usage",
+      "Optimize this database query to avoid N+1 problem",
+      "Improve this recursive function using memoization",
+      "Optimize this string concatenation in a loop",
+      "Reduce the space complexity of this DP solution",
+      "Improve the performance of this file processing code",
+      "Optimize this API endpoint for handling concurrent requests",
+      "Refactor this code to use lazy evaluation for better efficiency"
+    ],
+    "system_design": [
+      "Design a URL shortening service like bit.ly",
+      "Design a distributed cache system",
+      "Architecture for a real-time chat application",
+      "Design a scalable notification service",
+      "Design a rate limiting system for an API gateway",
+      "Architecture for a content delivery network (CDN)",
+      "Design a distributed task queue system",
+      "Design a logging and monitoring system for microservices",
+      "Architecture for a video streaming platform",
+      "Design a distributed key-value store"
+    ],
+    "debugging": [
+      "Fix this IndexError in list access",
+      "Debug why this function returns None instead of the expected value",
+      "Find the bug causing infinite loop in this code",
+      "Fix the memory leak in this long-running process",
+      "Debug why this async function doesn't execute as expected",
+      "Fix the race condition in this multi-threaded code",
+      "Debug why this regex pattern doesn't match correctly",
+      "Fix the off-by-one error in this binary search",
+      "Debug why this API call times out",
+      "Fix the null pointer exception in this code"
+    ],
+    "data_structures": [
+      "Implement a min heap from scratch",
+      "Create a red-black tree with insertion and deletion",
+      "Implement a graph using adjacency list representation",
+      "Create a bloom filter for membership testing",
+      "Implement a skip list data structure",
+      "Create a disjoint set (union-find) data structure",
+      "Implement a B-tree for database indexing",
+      "Create a segment tree for range queries",
+      "Implement a Fenwick tree (Binary Indexed Tree)",
+      "Create a circular buffer with thread safety"
+    ],
+    "web_development": [
+      "Create a REST API endpoint for user authentication",
+      "Implement JWT token validation middleware",
+      "Write a function to sanitize user input to prevent XSS",
+      "Create a pagination helper for database queries",
+      "Implement CORS middleware for an API",
+      "Write a function to upload files to S3",
+      "Create a WebSocket server for real-time updates",
+      "Implement rate limiting middleware for Express",
+      "Write a function to handle form validation",
+      "Create a caching layer for API responses"
+    ],
+    "machine_learning": [
+      "Implement gradient descent from scratch",
+      "Write a function to calculate accuracy, precision, and recall",
+      "Create a simple neural network using only numpy",
+      "Implement k-means clustering algorithm",
+      "Write a function for train-test split with stratification",
+      "Create a confusion matrix visualization",
+      "Implement linear regression using normal equation",
+      "Write a function for min-max normalization",
+      "Create a simple decision tree classifier",
+      "Implement PCA for dimensionality reduction"
+    ]
+  }
+}

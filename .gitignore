@@ -16,7 +16,6 @@ logs/
 *.log
 
 # Data
-data/
 *.db
 *.sqlite
 
