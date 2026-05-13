@@ -22,6 +22,5 @@ data/
 
 # Model cache
 .cache/
-models/
 
 Intelligent-Routing-System.md
