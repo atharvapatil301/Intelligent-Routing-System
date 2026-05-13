@@ -20,3 +20,6 @@ faiss-cpu>=1.7.4
 # PostgreSQL with pgvector for vector database
 psycopg2-binary>=2.9.9
 pgvector>=0.2.0
+
+# Phase 3+ Dataset generation and evaluation
+groq

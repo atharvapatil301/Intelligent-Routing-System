@@ -2,16 +2,18 @@
 import json
 import time
 import uuid
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 import numpy as np
+from groq import Groq
+import os
 
 from .clients.ollama_client import OllamaClient
 from .clients.claude_client import ClaudeClient
-from .feature_extractor import FeatureExtractor, QueryFeatures
-from .config import config
+from .feature_extractor import FeatureExtractor
 
 
 @dataclass
@@ -51,13 +53,15 @@ class DatasetGenerator:
     def __init__(
         self,
         output_dir: str = "data/datasets",
-        feature_extractor: Optional[FeatureExtractor] = None
+        feature_extractor: Optional[FeatureExtractor] = None,
+        groq_api_key: str = os.getenv("GROQ_API_KEY")
     ):
         """Initialize dataset generator.
 
         Args:
             output_dir: Directory to save datasets
             feature_extractor: Feature extractor instance
+            groq_api_key: Groq API key for LLM-as-judge evaluation
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -66,19 +70,21 @@ class DatasetGenerator:
         self.ollama_client = OllamaClient()
         self.claude_client = ClaudeClient()
 
+        self.groq_client = Groq(api_key=groq_api_key)
+
         self.samples: List[DatasetSample] = []
 
     def generate_sample(
         self,
         prompt: str,
-        evaluation_method: str = "heuristic",
+        evaluation_method: str = "llm_judge",
         timeout: int = 120
     ) -> DatasetSample:
         """Generate a single dataset sample.
 
         Args:
             prompt: Coding prompt to test
-            evaluation_method: Method to evaluate outputs ('heuristic', 'unit_test', 'llm_judge')
+            evaluation_method: Method to evaluate outputs (only 'llm_judge' supported)
             timeout: Timeout in seconds for each model
 
         Returns:
@@ -172,31 +178,28 @@ class DatasetGenerator:
         self,
         prompt: str,
         output: str,
-        method: str = "heuristic"
+        method: str = "llm_judge"
     ) -> Tuple[bool, float]:
-        """Evaluate model output quality.
+        """Evaluate model output quality using LLM-as-judge.
 
         Args:
             prompt: Original prompt
             output: Model output to evaluate
-            method: Evaluation method ('heuristic', 'unit_test', 'llm_judge')
+            method: Evaluation method (only 'llm_judge' supported)
 
         Returns:
             Tuple of (success: bool, score: float [0-1])
         """
-        if method == "heuristic":
-            return self._heuristic_evaluation(output)
-        elif method == "unit_test":
-            return self._unit_test_evaluation(prompt, output)
-        elif method == "llm_judge":
-            return self._llm_judge_evaluation(prompt, output)
-        else:
-            raise ValueError(f"Unknown evaluation method: {method}")
+        if method != "llm_judge":
+            raise ValueError(f"Only 'llm_judge' evaluation method is supported, got: {method}")
 
-    def _heuristic_evaluation(self, output: str) -> Tuple[bool, float]:
-        """Evaluate output using heuristics.
+        return self._llm_judge_evaluation(prompt, output)
+
+    def _llm_judge_evaluation(self, prompt: str, output: str) -> Tuple[bool, float]:
+        """Evaluate output using Groq (llama-3.1-8b-instant) as LLM judge.
 
         Args:
+            prompt: Original prompt
             output: Model output
 
         Returns:
@@ -205,66 +208,92 @@ class DatasetGenerator:
         if not output or output.startswith("ERROR:"):
             return False, 0.0
 
-        score = 0.0
-        reasons = []
+        eval_prompt = f"""You are an expert code reviewer. Evaluate the following code response based on these criteria:
 
-        if "def " in output or "class " in output or "function" in output:
-            score += 0.3
-            reasons.append("code_present")
+1. **Correctness**: Does the code correctly address the given prompt?
+2. **Completeness**: Is the solution complete and functional?
+3. **Code Quality**: Is the code well-structured, readable, and following best practices?
+4. **Explanations**: Are there appropriate explanations or comments?
 
-        if "```" in output:
-            score += 0.2
-            reasons.append("code_block")
+**Original Prompt:**
+{prompt}
 
-        if len(output) > 50:
-            score += 0.2
-            reasons.append("adequate_length")
+**Model Output:**
+{output}
 
-        error_indicators = ["error", "cannot", "unable", "sorry", "don't know"]
-        has_errors = any(ind in output.lower() for ind in error_indicators)
-        if not has_errors:
-            score += 0.3
-            reasons.append("no_errors")
+**Instructions:**
+Provide a score from 0.0 to 1.0 (where 0.0 is completely incorrect/unhelpful and 1.0 is perfect).
+Respond ONLY with a JSON object in this exact format:
+{{"score": <float between 0.0 and 1.0>, "reasoning": "<brief explanation>"}}"""
 
-        success = score >= 0.5
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = self.groq_client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=[
+                        {"role": "system", "content": "You are an expert code reviewer. Always respond with valid JSON."},
+                        {"role": "user", "content": eval_prompt}
+                    ],
+                    temperature=0.3,
+                    max_tokens=500
+                )
 
-        return success, min(score, 1.0)
+                response_text = response.choices[0].message.content.strip()
 
-    def _unit_test_evaluation(self, prompt: str, output: str) -> Tuple[bool, float]:
-        """Evaluate output using unit tests (if applicable).
+                if "```json" in response_text:
+                    response_text = response_text.split("```json")[1].split("```")[0].strip()
+                elif "```" in response_text:
+                    response_text = response_text.split("```")[1].split("```")[0].strip()
 
-        Args:
-            prompt: Original prompt
-            output: Model output
+                result = json.loads(response_text)
+                score = float(result.get("score", 0.0))
 
-        Returns:
-            Tuple of (success, score)
-        """
-        return self._heuristic_evaluation(output)
+                score = max(0.0, min(1.0, score))
 
-    def _llm_judge_evaluation(self, prompt: str, output: str) -> Tuple[bool, float]:
-        """Evaluate output using LLM-as-judge.
+                success = score >= 0.6
 
-        Args:
-            prompt: Original prompt
-            output: Model output
+                return success, score
 
-        Returns:
-            Tuple of (success, score)
-        """
-        return self._heuristic_evaluation(output)
+            except Exception as e:
+                error_str = str(e)
+
+                if "429" in error_str or "rate_limit" in error_str.lower():
+                    wait_time = 5
+                    match = re.search(r'retry.*?(\d+).*?second', error_str, re.IGNORECASE)
+                    if match:
+                        wait_time = int(match.group(1)) + 1
+
+                    if attempt < max_retries - 1:
+                        print(f"  Rate limit hit, waiting {wait_time}s before retry {attempt + 2}/{max_retries}...")
+                        time.sleep(wait_time)
+                        continue
+
+                if attempt < max_retries - 1:
+                    print(f"  Warning: Groq evaluation failed (attempt {attempt + 1}), retrying...")
+                    time.sleep(2)
+                    continue
+
+                print(f"  Warning: Groq evaluation failed: {error_str[:200]}")
+                if len(output) > 50 and not any(err in output.lower() for err in ["error", "cannot", "unable"]):
+                    return True, 0.5
+                return False, 0.2
+
+        if len(output) > 50 and not any(err in output.lower() for err in ["error", "cannot", "unable"]):
+            return True, 0.5
+        return False, 0.2
 
     def generate_from_prompts(
         self,
         prompts: List[str],
-        evaluation_method: str = "heuristic",
+        evaluation_method: str = "llm_judge",
         save_interval: int = 10
     ) -> List[DatasetSample]:
         """Generate samples from a list of prompts.
 
         Args:
             prompts: List of coding prompts
-            evaluation_method: Evaluation method to use
+            evaluation_method: Evaluation method to use (only 'llm_judge' supported)
             save_interval: Save progress every N samples
 
         Returns:

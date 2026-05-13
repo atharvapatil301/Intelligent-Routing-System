@@ -17,6 +17,8 @@ from .config import config
 from .dataset_generator import DatasetGenerator
 from .feature_extractor import FeatureExtractor
 from .vector_db import QueryVectorDB
+from .evaluator import RoutingEvaluator
+from .cost_optimizer import CostConfig
 
 console = Console()
 
@@ -518,6 +520,159 @@ def vector_db(action, file):
             console.print(f"[red]Error: File not found: {file}[/red]")
             return
         db.import_from_json(file)
+
+
+@cli.command()
+@click.argument("test_file")
+@click.option("--output", "-o", help="Output file for report")
+@click.option("--threshold", "-t", type=float, help="ML routing threshold to test")
+def evaluate(test_file, output, threshold):
+    """Evaluate routing system on test dataset."""
+    console.print("[bold cyan]Routing System Evaluation[/bold cyan]\n")
+
+    if not Path(test_file).exists():
+        console.print(f"[red]Error: Test file not found: {test_file}[/red]")
+        return
+
+    router = Router()
+    if threshold is not None:
+        router.ml_threshold = threshold
+        console.print(f"[yellow]Using custom threshold: {threshold}[/yellow]\n")
+
+    evaluator = RoutingEvaluator()
+
+    with console.status("[yellow]Running evaluation...[/yellow]"):
+        results = evaluator.evaluate_on_dataset(test_file, router)
+
+    metrics = results['metrics']
+
+    table = Table(title="Evaluation Metrics", box=box.ROUNDED)
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Total Queries", str(metrics['total_queries']))
+    table.add_row("Local Calls", f"{metrics['local_calls']} ({metrics['local_percentage']:.1f}%)")
+    table.add_row("Cloud Calls", f"{metrics['cloud_calls']} ({metrics['cloud_percentage']:.1f}%)")
+    table.add_row("Avg Confidence", f"{metrics['avg_confidence']:.2f}")
+
+    console.print(table)
+
+    if output:
+        report = evaluator.generate_report(results, output)
+        console.print(f"\n[green]✓ Report saved to: {output}[/green]")
+
+
+@cli.command()
+@click.argument("test_file")
+@click.option("--local-cost", type=float, default=0.0, help="Cost per local call")
+@click.option("--cloud-cost", type=float, default=0.01, help="Cost per cloud call")
+def compare(test_file, local_cost, cloud_cost):
+    """Compare routing strategies (Always Local, Always Cloud, Smart Router)."""
+    console.print("[bold cyan]Strategy Comparison[/bold cyan]\n")
+
+    if not Path(test_file).exists():
+        console.print(f"[red]Error: Test file not found: {test_file}[/red]")
+        return
+
+    cost_config = CostConfig(
+        local_cost_per_call=local_cost,
+        cloud_cost_per_call=cloud_cost
+    )
+
+    evaluator = RoutingEvaluator(cost_config)
+    router = Router()
+
+    with console.status("[yellow]Running comparison...[/yellow]"):
+        comparison = evaluator.compare_strategies(test_file, router)
+
+    table = Table(title="Strategy Comparison", box=box.ROUNDED)
+    table.add_column("Strategy", style="cyan")
+    table.add_column("Accuracy", style="white")
+    table.add_column("Cost", style="yellow")
+    table.add_column("Latency", style="magenta")
+    table.add_column("Local %", style="green")
+    table.add_column("Cloud %", style="blue")
+
+    for strategy_name, metrics in comparison.items():
+        if strategy_name == 'savings':
+            continue
+
+        table.add_row(
+            strategy_name.replace('_', ' ').title(),
+            f"{metrics['accuracy']:.1%}",
+            f"${metrics['total_cost']:.2f}",
+            f"{metrics['avg_latency_ms']:.0f}ms",
+            f"{metrics['local_percentage']:.1f}%",
+            f"{metrics['cloud_percentage']:.1f}%"
+        )
+
+    console.print(table)
+
+    if 'savings' in comparison:
+        savings = comparison['savings']
+        console.print("\n[bold]Cost Savings:[/bold]")
+        console.print(f"  Baseline (Always Cloud): ${savings['baseline_cost']:.2f}")
+        console.print(f"  Smart Router:            ${savings['optimized_cost']:.2f}")
+        console.print(f"  [green]Savings:                 ${savings['absolute_savings']:.2f} ({savings['percentage_savings']:.1f}%)[/green]")
+
+
+@cli.command()
+def dashboard():
+    """Show performance dashboard."""
+    console.print("[bold cyan]Performance Dashboard[/bold cyan]\n")
+
+    logger = RequestLogger()
+    stats = logger.get_statistics()
+
+    if stats["total_requests"] == 0:
+        console.print("[yellow]No data available. Make some queries first.[/yellow]")
+        return
+
+    summary_table = Table(title="Summary", box=box.ROUNDED)
+    summary_table.add_column("Metric", style="cyan")
+    summary_table.add_column("Value", style="green")
+
+    summary_table.add_row("Total Requests", str(stats["total_requests"]))
+    summary_table.add_row("Success Rate", f"{stats['success_rate']:.1f}%")
+    summary_table.add_row("Avg Latency", f"{stats['avg_latency_ms']:.0f}ms")
+
+    console.print(summary_table)
+
+    routing_table = Table(title="Routing Distribution", box=box.ROUNDED)
+    routing_table.add_column("Model", style="cyan")
+    routing_table.add_column("Requests", style="white")
+    routing_table.add_column("Percentage", style="green")
+    routing_table.add_column("Avg Latency", style="magenta")
+
+    routing_table.add_row(
+        "Local",
+        str(stats["local_requests"]),
+        f"{stats['local_percentage']:.1f}%",
+        f"{stats['avg_local_latency_ms']:.0f}ms"
+    )
+    routing_table.add_row(
+        "Cloud",
+        str(stats["cloud_requests"]),
+        f"{stats['cloud_percentage']:.1f}%",
+        f"{stats['avg_cloud_latency_ms']:.0f}ms"
+    )
+
+    console.print("\n")
+    console.print(routing_table)
+
+    cost_config = CostConfig()
+    estimated_cost = (
+        stats["local_requests"] * cost_config.local_cost_per_call +
+        stats["cloud_requests"] * cost_config.cloud_cost_per_call
+    )
+    baseline_cost = stats["total_requests"] * cost_config.cloud_cost_per_call
+    savings = baseline_cost - estimated_cost
+    savings_pct = (savings / baseline_cost * 100) if baseline_cost > 0 else 0
+
+    console.print("\n[bold]Estimated Costs:[/bold]")
+    console.print(f"  If Always Cloud: ${baseline_cost:.2f}")
+    console.print(f"  With Smart Router: ${estimated_cost:.2f}")
+    console.print(f"  [green]Savings: ${savings:.2f} ({savings_pct:.1f}%)[/green]")
 
 
 if __name__ == "__main__":

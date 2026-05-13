@@ -17,13 +17,20 @@ export POSTGRES_PASSWORD="your_password_here"
 # Health check
 ./run.sh check
 
-# View stats
+# View stats and performance
 ./run.sh stats
+./run.sh dashboard
+
+# Evaluate routing system
+./run.sh evaluate data/datasets/dataset_test.jsonl
+
+# Compare routing strategies
+./run.sh compare data/datasets/dataset_test.jsonl
 ```
 
 ## Documentation
 
-- **[PROGRESS.md](PROGRESS.md)** - Complete progress report with all phases, features, and running instructions (✅ Phase 1-3 Complete)
+- **[PROGRESS.md](PROGRESS.md)** - Complete progress report with all phases, features, and running instructions
 - **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** - Full 7-phase project roadmap
 
 ## Current Status
@@ -45,19 +52,33 @@ export POSTGRES_PASSWORD="your_password_here"
 - Dataset generation infrastructure
 - Dual-model evaluation (Qwen + Claude)
 - 100+ seed prompts across 10 categories
-- Heuristic evaluation method
+- LLM-as-judge evaluation using Groq (llama-3.1-8b-instant)
 - Train/val/test split generation
 - JSONL dataset format
+- Automated dataset generation and training pipeline
 
 **Phase 4**: ✅ Complete
 - Neural network routing model (145K parameters)
 - 3-layer feedforward architecture with dropout and batch normalization
 - 86.67% test accuracy on routing decisions
-- ML-based routing strategy
+- ML-based routing (now default)
+- Enhanced rule-based routing (fallback)
 - Configurable decision threshold
 - Model persistence and loading
 
-**Next**: Phase 5 - Optimization & Cost Analysis
+**Phase 5**: ✅ Complete
+- Multi-objective cost optimization (accuracy, latency, cost)
+- Confidence-based routing with automatic escalation
+- Threshold tuning and optimization
+- Strategy comparison framework
+
+**Phase 6**: ✅ Complete
+- Comprehensive evaluation framework
+- Dataset evaluation with test files
+- Live model comparison
+- Performance dashboard CLI command
+- Automated report generation
+- 66.7% cost reduction vs always-cloud baseline
 
 ---
 

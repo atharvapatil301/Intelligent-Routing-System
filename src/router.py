@@ -25,7 +25,9 @@ class Router:
         self,
         use_vector_db: bool = True,
         ml_threshold: float = 0.5,
-        model_dir: str = "models"
+        model_dir: str = "models",
+        confidence_threshold: float = 0.7,
+        use_confidence_routing: bool = False
     ):
         """Initialize router.
 
@@ -33,12 +35,16 @@ class Router:
             use_vector_db: Whether to use vector DB for similarity search
             ml_threshold: Threshold for ML routing (if P(cloud) > threshold, route to cloud)
             model_dir: Directory containing trained ML model
+            confidence_threshold: Minimum confidence for local routing
+            use_confidence_routing: Enable confidence-based escalation
         """
         self.prompt_length_threshold = config.prompt_length_threshold
         self.cloud_keywords = config.cloud_keywords
         self.use_vector_db = use_vector_db
         self.ml_threshold = ml_threshold
         self.model_dir = model_dir
+        self.confidence_threshold = confidence_threshold
+        self.use_confidence_routing = use_confidence_routing
 
         self.feature_extractor = FeatureExtractor()
 
@@ -60,7 +66,30 @@ class Router:
         Returns:
             RoutingDecision with target model and reasoning
         """
-        return self._ml_routing(prompt)
+        decision = self._ml_routing(prompt)
+
+        if self.use_confidence_routing:
+            decision = self._apply_confidence_routing(decision)
+
+        return decision
+
+    def _apply_confidence_routing(self, decision: RoutingDecision) -> RoutingDecision:
+        """Apply confidence-based escalation.
+
+        Args:
+            decision: Initial routing decision
+
+        Returns:
+            Potentially modified routing decision
+        """
+        if decision.target == "local" and decision.confidence < self.confidence_threshold:
+            return RoutingDecision(
+                target="cloud",
+                reason=f"Escalated to cloud (low confidence: {decision.confidence:.2f} < {self.confidence_threshold})",
+                confidence=decision.confidence,
+                features=decision.features
+            )
+        return decision
 
     def _enhanced_routing(self, prompt: str) -> RoutingDecision:
         """Enhanced routing using advanced features (fallback when ML is unavailable).
