@@ -26,21 +26,29 @@ class QueryVectorDB:
 
     def __init__(
         self,
-        host: str = "db.ezrhboaaipclzspfffxk.supabase.co",
-        port: int = 5432,
-        database: str = "postgres",
-        user: str = "postgres",
+        host: str = None,
+        port: int = None,
+        database: str = None,
+        user: str = None,
         password: str = None
     ):
         """Initialize vector database connection.
 
         Args:
-            host: Database host
-            port: Database port
-            database: Database name
-            user: Database user
+            host: Database host (will use env var POSTGRES_HOST if not provided)
+            port: Database port (will use env var POSTGRES_PORT if not provided)
+            database: Database name (will use env var POSTGRES_DB if not provided)
+            user: Database user (will use env var POSTGRES_USER if not provided)
             password: Database password (will use env var POSTGRES_PASSWORD if not provided)
         """
+        if host is None:
+            host = os.getenv("POSTGRES_HOST", "db.ezrhboaaipclzspfffxk.supabase.co")
+        if port is None:
+            port = int(os.getenv("POSTGRES_PORT", "5432"))
+        if database is None:
+            database = os.getenv("POSTGRES_DB", "postgres")
+        if user is None:
+            user = os.getenv("POSTGRES_USER", "postgres")
         if password is None:
             password = os.getenv("POSTGRES_PASSWORD", "")
 

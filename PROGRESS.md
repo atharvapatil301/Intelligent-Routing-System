@@ -24,8 +24,9 @@
 # 1. Install dependencies
 python3.11 -m pip install -r requirements.txt
 
-# 2. Set your Supabase database password
-export POSTGRES_PASSWORD="your_password_here"
+# 2. Set up environment variables
+cp .env.example .env
+# Edit .env and add your credentials (POSTGRES_PASSWORD, GROQ_API_KEY)
 
 # 3. Ensure Ollama is running with qwen2.5-coder
 ollama pull qwen2.5-coder
@@ -1011,35 +1012,64 @@ echo "follow-up" | claude --print --tools "" --continue
 
 ### Environment Variables
 
-Create `.env` file or export these variables:
+Create `.env` file based on `.env.example`:
 
 ```bash
-# PostgreSQL/Supabase Database (REQUIRED)
-POSTGRES_PASSWORD=your_supabase_password
-
-# Ollama settings
+# Ollama Configuration
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=qwen2.5-coder:14b
 
-# Routing settings
-DEFAULT_ROUTING_STRATEGY=rule_based  # or 'enhanced'
-PROMPT_LENGTH_THRESHOLD=100
+# Groq Configuration (REQUIRED for dataset generation)
+GROQ_API_KEY=your_groq_api_key_here
 
-# Claude settings (not needed for CLI integration)
-ANTHROPIC_API_KEY=
+# Claude Configuration (optional - only needed if using Anthropic API directly)
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# PostgreSQL/Supabase Database Configuration (REQUIRED)
+POSTGRES_HOST=db.ezrhboaaipclzspfffxk.supabase.co
+POSTGRES_PORT=5432
+POSTGRES_DB=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_supabase_password_here
+
+# Routing Configuration
+PROMPT_LENGTH_THRESHOLD=100
+```
+
+**Quick Setup:**
+```bash
+# Copy example file and edit with your credentials
+cp .env.example .env
+nano .env  # or use your preferred editor
 ```
 
 ### Database Configuration
 
-The system uses a PostgreSQL database with pgvector extension hosted on Supabase:
+The system uses a PostgreSQL database with pgvector extension hosted on Supabase.
 
-- **Host**: db.ezrhboaaipclzspfffxk.supabase.co
-- **Port**: 5432
-- **Database**: postgres
-- **User**: postgres
-- **Password**: Set via `POSTGRES_PASSWORD` environment variable
+**Configuration via Environment Variables:**
+
+All database settings can be configured through environment variables in your `.env` file:
+
+```bash
+POSTGRES_HOST=db.ezrhboaaipclzspfffxk.supabase.co  # Default Supabase host
+POSTGRES_PORT=5432                                  # Default PostgreSQL port
+POSTGRES_DB=postgres                                # Default database name
+POSTGRES_USER=postgres                              # Default user
+POSTGRES_PASSWORD=your_password_here                # REQUIRED: Your Supabase password
+```
 
 The database automatically creates the required schema and indexes on first use.
+
+**Using a Different Database:**
+To use your own PostgreSQL instance, simply update the environment variables in `.env`:
+```bash
+POSTGRES_HOST=your-db-host.com
+POSTGRES_PORT=5432
+POSTGRES_DB=your_db_name
+POSTGRES_USER=your_username
+POSTGRES_PASSWORD=your_password
+```
 
 ### Routing Strategies
 

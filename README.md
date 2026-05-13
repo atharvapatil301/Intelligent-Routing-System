@@ -8,8 +8,9 @@ An adaptive edge-cloud AI routing system that intelligently routes coding querie
 # Install dependencies
 python3.11 -m pip install -r requirements.txt
 
-# Set your Supabase database password
-export POSTGRES_PASSWORD="your_password_here"
+# Set up environment variables
+cp .env.example .env
+# Edit .env and add your credentials (POSTGRES_PASSWORD, GROQ_API_KEY)
 
 # Interactive mode
 ./run.sh generate --interactive
